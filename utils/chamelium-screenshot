@@ -1,0 +1,232 @@
+#!/usr/bin/python3
+# Copyright (c) 2014 The Chromium OS Authors. All rights reserved.
+# Copyright (c) 2017 Lyude Paul <thatslyude@gmail.com>
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import argparse
+import errno
+import operator
+import os
+import subprocess
+import sys
+import tempfile
+import time
+import re
+from functools import reduce
+from xmlrpc.client import ServerProxy
+
+class Edid(object):
+    """Edid is an abstraction of Extended Display Identification Data."""
+
+    def __init__(self, data):
+        """Construct an Edid.
+
+        @param data: A byte-array of EDID data.
+        """
+        self.data = data
+
+    @classmethod
+    def from_file(cls, filename):
+        """Construct an Edid from a file.
+
+        @param filename: A string of filename.
+        """
+        if not os.path.exists(filename):
+            raise ValueError('EDID file %r does not exist' % filename)
+
+        if filename.upper().endswith('.TXT'):
+            # Convert the EDID text format, returning from xrandr.
+            data = reduce(operator.add,
+                          [s.strip().decode('hex') for s in open(filename).readlines()])
+        else:
+            data = open(filename).read()
+        return cls(data)
+
+def parse_area_arg(arg):
+    matches = re.match(r"(?P<w>\d+)x(?P<h>\d+)(\+(?P<x>\d+)\+(?P<y>\d+))?",
+                       arg).groupdict()
+    try:
+        w = int(matches['w'])
+        h = int(matches['h'])
+        x = int(matches['x']) if matches['x'] else 0
+        y = int(matches['y']) if matches['y'] else 0
+    except Exception as e:
+        raise argparse.ArgumentTypeError()
+
+    unrounded_resolution = (x, y, w, h)
+
+    rounded_resolution = list(unrounded_resolution)
+    for idx, i in enumerate(rounded_resolution):
+        if i % 8:
+            rounded_resolution[idx] += 8 - (i % 8)
+    rounded_resolution = tuple(rounded_resolution)
+
+    # The chamelium only likes 8-bit aligned values, e.g. those divisible by 8,
+    # so make sure to just use the closest resolutionolution possible
+    if rounded_resolution != unrounded_resolution:
+        print("Rounded resolution from %dx%d+%d+%d to %dx%d+%d+%d" % (
+            *unrounded_resolution, *rounded_resolution))
+
+    return rounded_resolution
+
+def parse_count_arg(arg):
+    count = int(arg)
+    if count < 1:
+        raise argparse.ArgumentTypeError()
+
+    return count
+
+def default_output_suffix():
+    return time.strftime("%Y%m%d-%H%M%S")
+
+parser = argparse.ArgumentParser(
+    description='Connect to chameleond and capture screenshots',
+    conflict_handler='resolve'
+)
+parser.add_argument('chameleon_host', type=str,
+                    help='host address of Chameleond')
+parser.add_argument('-r', '--replug', action='store_true',
+                    help='unplug and plug before capturing screen')
+parser.add_argument('-e', '--edid-file', type=str, default=None,
+                    help='filename of the edid to apply')
+parser.add_argument('-a', '--area', help="only capture the given area WxH[+X+Y]",
+                    type=parse_area_arg, default=tuple())
+parser.add_argument('-p', '--port', type=int,
+                    help='the port on the chamelium to capture video ' + \
+                         'output from (default: use first auto-detected port)')
+parser.add_argument('-c', '--count', type=parse_count_arg,
+                    default=1, help='The number of frames to capture')
+
+single_frame_args = parser.add_argument_group('single-frame capture arguments')
+single_frame_args.add_argument('-o', '--output', type=argparse.FileType('w+b'),
+                               help='output file name of screenshot')
+single_frame_args.add_argument('-v', '--view', type=str, metavar='VIEW_PROGRAM',
+                               help='open the image file with an image ' +   \
+                                    'viewer after downloading, then exit ' + \
+                                    'and cleanup when complete.')
+
+multi_frame_args = parser.add_argument_group('multi-frame capture arguments')
+multi_frame_args.add_argument('-d', '--output-dir',
+                              help='The directory to output each frame in')
+multi_frame_args.add_argument('--file-prefix',
+                              help='The name to prefix each captured frame with')
+args = parser.parse_args()
+
+if args.count > 1:
+    if args.output:
+        parser.error("--output is only for single-frame captures")
+    if args.view:
+        parser.error("--view cannot be used in multi-frame capture mode")
+
+    if args.output_dir:
+        if not os.path.exists(args.output_dir):
+            os.mkdir(args.output_dir)
+        elif not os.path.isdir(args.output_dir):
+            parser.error("%s is not a directory" % args.output_dir)
+    else:
+        args.output_dir = "chamelium-screenshot-%s" % default_output_suffix()
+        os.mkdir(args.output_dir)
+    if not args.file_prefix:
+        args.file_prefix = "frame"
+else:
+    if args.output_dir:
+        parser.error("--output-dir is only for multi-frame captures")
+    if args.file_prefix:
+        parser.error("--file-prefix is only for multi-frame captures")
+
+    # Default output settings
+    if not args.output:
+        if args.view:
+            args.output = tempfile.NamedTemporaryFile(suffix='.png')
+        else:
+            args.output = open("chamelium-screenshot-%s.png" %
+                               default_output_suffix(), "w+b")
+
+chameleon = ServerProxy(args.chameleon_host,
+                        allow_none=True, use_builtin_types=True)
+
+if args.port:
+    port = args.port
+if not args.port:
+    port = chameleon.ProbeInputs()[0]
+    print('Using auto-detected port %d (%s)' % (
+        port, chameleon.GetConnectorType(port)))
+
+was_plugged = chameleon.IsPlugged(port)
+
+if was_plugged and (args.replug or args.edid_file):
+    print('Unplugging...')
+    chameleon.Unplug(port)
+
+if args.edid_file:
+    print('Reading EDID from %s...' % args.edid_file)
+    edid = Edid.from_file(args.edid_file)
+    print('Applying EDID...')
+    edid_id = chameleon.CreateEdid(edid)
+    chameleon.ApplyEdid(port, edid_id)
+    chameleon.DestroyEdid(edid_id)
+    time.sleep(1)
+
+if not chameleon.IsPlugged(port):
+    print('Plugging...')
+    chameleon.Plug(port)
+    chameleon.WaitVideoInputStable(port, 30)
+
+try:
+    if args.area:
+        x, y, width, height = args.area
+    else:
+        x = 0; y = 0
+        width, height = chameleon.DetectResolution(port)
+
+    print('Detected screen size %dx%d' % (width, height))
+
+    # Make sure we can capture the specified number of frames
+    frame_limit = chameleon.GetMaxFrameLimit(port, width, height)
+    if args.count > frame_limit:
+        raise Exception(
+            '--count',
+            'Chameleon can only capture up to %d frames on port %d' % (
+                frame_limit, port))
+
+    print('Capturing %d frames with geometry %dx%d+%d+%d' %
+          (args.count, width, height, x, y))
+    chameleon.CaptureVideo(port, args.count, x, y, width, height)
+
+    def read_frame(idx, output_path):
+        frame = chameleon.ReadCapturedFrame(idx)
+        with tempfile.NamedTemporaryFile(suffix='.rgb') as f:
+            f.write(frame)
+            f.flush()
+            subprocess.check_call([
+                'convert', '-size', '%dx%d' % (width-x, height-y),
+                '-depth', '8',
+                f.name, output_path
+            ])
+
+    if args.count == 1:
+        print("Outputting to %s..." % args.output.name)
+        read_frame(0, args.output.name)
+        view_file = args.output.name
+
+        if args.view:
+            print('Opening with "%s"' % args.view)
+            subprocess.check_call([*args.view.split(), view_file])
+    else:
+        print("Saving frames in %s..." % args.output_dir)
+        capture_name = lambda idx: "%s/%s-%d.png" % (
+                args.output_dir, args.file_prefix, idx)
+        for i in range(0, chameleon.GetCapturedFrameCount()):
+            read_frame(i, capture_name(i))
+            print('.', end='', flush=True)
+
+        print('')
+
+
+finally:
+    if not was_plugged:
+        print('Unplugging to the original state...')
+        chameleon.Unplug(port)
+
+# vim: ft=python :
