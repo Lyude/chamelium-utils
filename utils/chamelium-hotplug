@@ -2,18 +2,29 @@
 
 import argparse
 import urllib.parse
+from tabulate import tabulate
 from xmlrpc.client import ServerProxy
 
-def action_show():
-    headers = ["Port", "Type", "Physically plugged", "Plugged"]
-    # Aligned to the left to the length of the longest header + 3
-    row_format = ("{:<%d}" % (len(max(headers, key=lambda s: len(s))) + 3)) * len(headers)
+ALLOWED_CONNECTOR_TYPES = {
+    'VGA',
+    'HDMI',
+    'DP',
+}
 
-    print(row_format.format(*headers))
-    for port in range(1, 5):
-        print(row_format.format(port, chameleon.GetConnectorType(port),
-                                str(chameleon.IsPhysicalPlugged(port)),
-                                str(chameleon.IsPlugged(port))))
+def action_show():
+    # headers = ["Port", "Type", "Physically plugged", "Plugged"]
+    table = list()
+    for port in chameleon.GetSupportedInputs():
+        if chameleon.GetConnectorType(port) not in ALLOWED_CONNECTOR_TYPES:
+            continue
+        table.append([port,
+                      chameleon.GetConnectorType(port),
+                      str(chameleon.IsPhysicalPlugged(port)),
+                      str(chameleon.IsPlugged(port))])
+
+    # Aligned to the left to the length of the longest header + 3
+    print(tabulate(table, headers=[
+        "Port", "Type", "Physically plugged", "Plugged"]))
 
 def action_plug():
     for port in args.ports:
