@@ -1,14 +1,15 @@
 #!/usr/bin/python3
 
+import setuptools
 from setuptools import setup
 setup(
     name="chamelium-utils",
-    scripts=[
-        'utils/chamelium-screenshot',
-        'utils/chamelium-hotplug',
-        'utils/chamelium-vga-out',
-        'utils/chamelium-edid'
-    ]
+    packages=setuptools.find_packages(),
+    entry_points={
+        'console_scripts': [
+            'chamelium = chamelium_utils.main:__main__'
+        ]
+    },
 
     author="Lyude Paul",
     author_email="thatslyude@gmail.com",
