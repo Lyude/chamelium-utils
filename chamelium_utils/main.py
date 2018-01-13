@@ -222,8 +222,8 @@ multi_frame_args.add_argument(
 )
 args = parser.parse_args()
 if 'func' not in args:
-    parser.error('No action specified')
+    args.subparser.error('No action specified')
 if args.chameleon == None:
-    parser.error('$CHAMELEON_IP is not set and --chameleon was not given')
+    args.subparser.error('$CHAMELEON_IP is not set and --chameleon was not given')
 
 __main__ = functools.partial(args.func, args.chameleon, args, args.subparser)
