@@ -20,7 +20,7 @@ def parse_area_arg(arg):
     except Exception as e:
         raise argparse.ArgumentTypeError()
 
-    return (x, y, w, h)
+    return (w, h, x, y)
 
 def round_resolution(resolution, align):
     rounded_resolution = list(resolution)
@@ -108,9 +108,9 @@ def screenshot(chameleon, args, parser):
         if args.area:
             port_type = chameleon.GetConnectorType(port)
             if port_type == 'HDMI':
-                x, y, width, height = round_resolution(args.area, 16)
+                width, height, x, y = round_resolution(args.area, 16)
             else:
-                x, y, width, height = round_resolution(args.area, 8)
+                width, height, x, y = round_resolution(args.area, 8)
         else:
             x = 0; y = 0
             width, height = chameleon.DetectResolution(port)
