@@ -28,13 +28,17 @@ class ChameleonCommand(argparse.ArgumentParser):
         kwargs['parents'].append(parent_parser)
         super().__init__(*args, **kwargs)
 
+    def add_subparsers(self, *args, **kwargs):
+        kwargs['parser_class'] = self.__class__
+        return super().add_subparsers(*args, **kwargs)
+
 parser = ChameleonCommand(
     description="A cli utility for controlling the Chamelium"
 )
 
 import chamelium_utils.hotplug as hotplug
 
-subparsers = parser.add_subparsers(parser_class=ChameleonCommand)
+subparsers = parser.add_subparsers()
 parser_show = subparsers.add_parser(
     'status',
     help='Show the status of each port on the Chameleon'
@@ -104,8 +108,14 @@ parser_reset.set_defaults(func=hotplug.reset)
 
 import chamelium_utils.edid as edid
 
-parser_edid_get = subparsers.add_parser(
-    'get-edid',
+parser_edid = subparsers.add_parser(
+    'edid',
+    help='Manage EDID blobs for video ports on the Chamelium'
+)
+subparsers_edid = parser_edid.add_subparsers()
+
+parser_edid_get = subparsers_edid.add_parser(
+    'get',
     help='Retrieve the current edid blob being used on a port'
 )
 parser_edid_get.add_argument(
@@ -121,8 +131,8 @@ parser_edid_get.add_argument(
 )
 parser_edid_get.set_defaults(func=edid.get)
 
-parser_edid_set = subparsers.add_parser(
-    'set-edid',
+parser_edid_set = subparsers_edid.add_parser(
+    'set',
     help='Set the current EDID for a port on the Chamelium'
 )
 parser_edid_set.add_argument(
