@@ -28,6 +28,8 @@ class ChameleonCommand(argparse.ArgumentParser):
         kwargs['parents'].append(parent_parser)
         super().__init__(*args, **kwargs)
 
+        self.set_defaults(subparser=self)
+
     def add_subparsers(self, *args, **kwargs):
         kwargs['parser_class'] = self.__class__
         return super().add_subparsers(*args, **kwargs)
@@ -224,4 +226,4 @@ if 'func' not in args:
 if args.chameleon == None:
     parser.error('$CHAMELEON_IP is not set and --chameleon was not given')
 
-__main__ = functools.partial(args.func, args.chameleon, args, parser)
+__main__ = functools.partial(args.func, args.chameleon, args, args.subparser)
