@@ -201,9 +201,10 @@ single_frame_args.add_argument(
     help='output file name of screenshot'
 )
 single_frame_args.add_argument(
-    '-v', '--view',
-    help='open the image file with an image viewer after downloading',
-    type=str, metavar='VIEW_PROGRAM'
+    '-v', '--view', metavar='CMD',
+    help=('Open the image file with an image viewer after downloading. '
+          'CMD defaults to $CHAMELEON_VIEWER'),
+    type=screenshot.parse_view_arg, nargs='?', const=''
 )
 
 multi_frame_args = parser_screenshot.add_argument_group(

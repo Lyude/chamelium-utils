@@ -44,6 +44,13 @@ def parse_count_arg(arg):
 
     return count
 
+def parse_view_arg(arg):
+    try:
+        return arg if arg else os.environ['CHAMELEON_VIEWER']
+    except KeyError:
+        raise argparse.ArgumentTypeError(
+            "No viewer specified and $CHAMELEON_VIEWER isn't set")
+
 
 def screenshot(chameleon, args, parser):
     # Validate arguments
