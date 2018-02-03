@@ -22,13 +22,17 @@ def parse_chameleon_url(arg):
     except Exception:
         raise argparse.ArgumentTypeError("'%s' is not a valid url" % arg)
 
-parent_parser = argparse.ArgumentParser(add_help=False)
+parent_parser = argparse.ArgumentParser(
+    add_help=False,
+    allow_abbrev=True
+)
 parent_parser.add_argument(
     "--chameleon", metavar='URL',
     help=('The URL to the chameleond instance (defaults to $CHAMELEON_IP)'),
-    type=parse_chameleon_url,
-    default=os.getenv('CHAMELEON_IP')
+    type=parse_chameleon_url
 )
+
+top_args = parent_parser.parse_known_args()[0]
 
 class ChameleonCommand(argparse.ArgumentParser):
     def __init__(self, *args, **kwargs):
@@ -36,6 +40,7 @@ class ChameleonCommand(argparse.ArgumentParser):
             kwargs['parents'] = []
 
         kwargs['parents'].append(parent_parser)
+        kwargs['allow_abbrev'] = True
         super().__init__(*args, **kwargs)
 
         self.set_defaults(subparser=self)
@@ -233,7 +238,17 @@ multi_frame_args.add_argument(
 args = parser.parse_args()
 if 'func' not in args:
     args.subparser.error('No action specified')
-if args.chameleon == None:
-    args.subparser.error('$CHAMELEON_IP is not set and --chameleon was not given')
 
-__main__ = functools.partial(args.func, args.chameleon, args, args.subparser)
+if args.chameleon is not None:
+    chameleon = args.chameleon
+elif top_args.chameleon is not None:
+    chameleon = top_args.chameleon
+else:
+    try:
+        chameleon = parse_chameleon_url(os.getenv('CHAMELEON_IP'))
+        if chameleon is None:
+            args.subparser.error('$CHAMELEON_IP is not set and --chameleon was not given')
+    except argparse.ArgumentTypeError as e:
+        parser.error('$CHAMELEON_IP: %s' % e.args[0])
+
+__main__ = functools.partial(args.func, chameleon, args, args.subparser)
