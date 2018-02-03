@@ -54,6 +54,15 @@ def parse_view_arg(arg):
 
 def screenshot(chameleon, args, parser):
     # Validate arguments
+    if args.port:
+        port = args.port
+    if not args.port:
+        try:
+            port = list(filter(lambda p: p in VIDEO_CONNECTOR_TYPES,
+                               chameleon.ProbeInputs()))[0]
+        except Exception:
+            parser.error(('No connected video ports were auto-detected and '
+                          '--port was not specified'))
     if args.count > 1:
         if args.output:
             parser.error("--output is only for single-frame captures")
@@ -83,16 +92,6 @@ def screenshot(chameleon, args, parser):
             else:
                 args.output = open("chamelium-screenshot-%s.png" %
                                    default_output_suffix(), "w+b")
-
-    if args.port:
-        port = args.port
-    if not args.port:
-        try:
-            port = list(filter(lambda p: p in VIDEO_CONNECTOR_TYPES,
-                               chameleon.ProbeInputs()))[0]
-        except Exception:
-            parser.error(('No connected video ports were auto-detected and '
-                          '--port was not specified'))
 
         print('Using auto-detected port %d (%s)' % (
             port, chameleon.GetConnectorType(port)))
