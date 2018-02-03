@@ -87,7 +87,13 @@ def screenshot(chameleon, args, parser):
     if args.port:
         port = args.port
     if not args.port:
-        port = chameleon.ProbeInputs()[0]
+        try:
+            port = list(filter(lambda p: p in VIDEO_CONNECTOR_TYPES,
+                               chameleon.ProbeInputs()))[0]
+        except Exception:
+            parser.error(('No connected video ports were auto-detected and '
+                          '--port was not specified'))
+
         print('Using auto-detected port %d (%s)' % (
             port, chameleon.GetConnectorType(port)))
 
