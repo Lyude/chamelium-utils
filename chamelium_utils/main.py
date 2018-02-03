@@ -8,7 +8,17 @@ from chamelium_utils.common import *
 
 def parse_chameleon_url(arg):
     try:
+        if not (arg.startswith('http://') or arg.startswith('https://')):
+            parts = arg.split(':', maxsplit=2)
+            host = parts[0]
+            port = int(parts[1]) if len(parts) > 1 else DEFAULT_RPC_PORT
+
+            arg = 'http://%s:%d' % (host, port)
+
         return ServerProxy(arg, allow_none=True, use_builtin_types=True)
+    except ValueError:
+        # we can only hit this if int(parts[1]) fails
+        raise argparse.ArgumentTypeError("'%s' is not a valid port" % parts[1])
     except Exception:
         raise argparse.ArgumentTypeError("'%s' is not a valid url" % arg)
 

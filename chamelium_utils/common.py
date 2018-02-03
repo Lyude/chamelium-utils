@@ -3,6 +3,7 @@ VIDEO_CONNECTOR_TYPES = {
     'HDMI',
     'DP',
 }
+DEFAULT_RPC_PORT = 9992
 
 class ChameleonEdid:
     """ An edid object on the chamelium """
