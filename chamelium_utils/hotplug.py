@@ -1,10 +1,6 @@
 #!/usr/bin/python3
 
-import argparse
-import urllib.parse
 from tabulate import tabulate
-from xmlrpc.client import ServerProxy
-
 from chamelium_utils.common import *
 
 def show(chameleon, args, parser):
