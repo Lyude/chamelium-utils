@@ -1,11 +1,3 @@
-import argparse
-import re
-import xmlrpc.client
-import functools
-import sys
-from abc import *
-from urllib.parse import urlparse
-
 VIDEO_CONNECTOR_TYPES = {
     'VGA',
     'HDMI',
