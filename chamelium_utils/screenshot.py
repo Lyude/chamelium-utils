@@ -10,15 +10,15 @@ def default_output_suffix():
     return time.strftime("%Y%m%d-%H%M%S")
 
 def parse_area_arg(arg):
-    matches = re.match(r"(?P<w>\d+)x(?P<h>\d+)(\+(?P<x>\d+)\+(?P<y>\d+))?",
-                       arg).groupdict()
     try:
+        matches = re.match(r"(?P<w>\d+)x(?P<h>\d+)(\+(?P<x>\d+)\+(?P<y>\d+))?",
+                           arg).groupdict()
         w = int(matches['w'])
         h = int(matches['h'])
         x = int(matches['x']) if matches['x'] else 0
         y = int(matches['y']) if matches['y'] else 0
-    except Exception as e:
-        raise argparse.ArgumentTypeError()
+    except Exception:
+        raise argparse.ArgumentTypeError("%s isn't a valid area" % arg)
 
     return (w, h, x, y)
 
