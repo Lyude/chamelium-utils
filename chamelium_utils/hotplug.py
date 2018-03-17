@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 from tabulate import tabulate
 from chamelium_utils.common import *
 
