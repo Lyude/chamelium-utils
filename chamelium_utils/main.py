@@ -245,9 +245,11 @@ elif top_args.chameleon is not None:
     chameleon = top_args.chameleon
 else:
     try:
-        chameleon = parse_chameleon_url(os.getenv('CHAMELEON_IP'))
+        chameleon = os.getenv('CHAMELEON_IP')
         if chameleon is None:
             args.subparser.error('$CHAMELEON_IP is not set and --chameleon was not given')
+
+        chameleon = parse_chameleon_url(chameleon)
     except argparse.ArgumentTypeError as e:
         parser.error('$CHAMELEON_IP: %s' % e.args[0])
 
