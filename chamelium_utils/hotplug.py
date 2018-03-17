@@ -4,8 +4,6 @@ from chamelium_utils.common import *
 def show(chameleon, args, parser):
     table = list()
     for port in chameleon.GetSupportedInputs():
-        if chameleon.GetConnectorType(port) not in VIDEO_CONNECTOR_TYPES:
-            continue
         table.append([port,
                       chameleon.GetConnectorType(port),
                       str(chameleon.IsPhysicalPlugged(port)),
