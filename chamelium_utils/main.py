@@ -32,8 +32,6 @@ parent_parser.add_argument(
     type=parse_chameleon_url
 )
 
-top_args = parent_parser.parse_known_args()[0]
-
 class ChameleonCommand(argparse.ArgumentParser):
     def __init__(self, *args, **kwargs):
         if 'parents' not in kwargs:
@@ -241,9 +239,11 @@ if 'func' not in args:
 
 if args.chameleon is not None:
     chameleon = args.chameleon
-elif top_args.chameleon is not None:
-    chameleon = top_args.chameleon
 else:
+    top_args = parent_parser.parse_known_args()[0]
+    chameleon = top_args.chameleon
+
+if chameleon is None:
     try:
         chameleon = os.getenv('CHAMELEON_IP')
         if chameleon is None:
