@@ -27,11 +27,15 @@ def reset(chameleon, args, parser):
     chameleon.Reset()
 
 def pulse(chameleon, args, parser):
-    print("Firing %d HPD pulses on port %d, deassert interval=%dms, assert interval=%dms, end level=%s..." % (
-        args.count, args.port, args.deassert_interval,
-        args.assert_interval if args.assert_interval != None else args.deassert_interval,
+    if args.deassert_interval is None:
+        deassert_interval = args.assert_interval
+    else:
+        deassert_interval = args.deassert_interval
+
+    print("Firing %d HPD pulses on port %d, assert interval=%dms, deassert interval=%dms, end level=%s..." % (
+        args.count, args.port, args.assert_interval, deassert_interval,
         args.end_level))
     chameleon.FireHpdPulse(args.port,
-                           args.deassert_interval * 1000,
-                           args.assert_interval, args.count,
-                           0 if args.end_level == 'low' else 1)
+                           deassert_interval * 1000,
+                           args.assert_interval * 1000,
+                           args.count, 0 if args.end_level == 'low' else 1)

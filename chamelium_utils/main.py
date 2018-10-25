@@ -84,16 +84,12 @@ parser_unplug.set_defaults(func=hotplug.unplug)
 
 parser_pulse = subparsers.add_parser(
     'pulse',
-    help='Send multiple identical HPD pulses'
+    help='Send multiple identical HPD pulses',
+    epilog='For DP: 100ms = long pulse, 2ms = short pulse'
 )
 parser_pulse.add_argument(
     'port',
     help='The port to send the pulses on',
-    type=int
-)
-parser_pulse.add_argument(
-    'deassert_interval',
-    help='The time in ms of the deassert pulse',
     type=int
 )
 parser_pulse.add_argument(
@@ -102,12 +98,17 @@ parser_pulse.add_argument(
     type=int, default=1
 )
 parser_pulse.add_argument(
-    '--assert-interval',
-    help='The time in ms of the assert pulse (defaults to the deassert interval)',
-    type=int, default=None
+    '-a', '--assert-interval', metavar='INTERVAL_MS',
+    help='The time in ms of the assert pulse (defaults to 100)',
+    type=int, default=100,
 )
 parser_pulse.add_argument(
-    '--end-level',
+    '-d', '--deassert-interval', metavar='INTERVAL_MS',
+    help='The time in ms of the deassert pulse (defaults to the assert interval)',
+    type=int, default=None,
+)
+parser_pulse.add_argument(
+    '-e', '--end-level',
     help='Whether to end with the hpd line as high or low (plugged or unplugged)',
     type=str, choices=('high', 'low'), default='high'
 )
