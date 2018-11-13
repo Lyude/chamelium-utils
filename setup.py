@@ -7,7 +7,7 @@ setup(
     packages=setuptools.find_packages(),
     entry_points={
         'console_scripts': [
-            'chamelium = chamelium_utils.main:__main__'
+            'chamelium = chamelium_utils.__main__:__main__'
         ]
     },
 
