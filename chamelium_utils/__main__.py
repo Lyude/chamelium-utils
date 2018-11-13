@@ -1,6 +1,7 @@
 import argparse
 import os
 import socket
+import errno
 from sys import stderr
 
 from urllib.parse import urlparse
@@ -264,4 +265,7 @@ def __main__():
         print('error: Connection to chamelium @ %s failed with code %d: %s' % (
             chameleon_url, e.errno, e.strerror), file=stderr
         )
+        return e.errno
     except KeyboardInterrupt:
+        print('Interrupted')
+        return errno.EINTR
