@@ -1,6 +1,7 @@
 import argparse
 import os
-import functools
+import socket
+from sys import stderr
 
 from urllib.parse import urlparse
 from xmlrpc.client import ServerProxy
@@ -15,7 +16,7 @@ def parse_chameleon_url(arg):
 
             arg = 'http://%s:%d' % (host, port)
 
-        return ServerProxy(arg, allow_none=True, use_builtin_types=True)
+        return arg
     except ValueError:
         # we can only hit this if int(parts[1]) fails
         raise argparse.ArgumentTypeError("'%s' is not a valid port" % parts[1])
@@ -239,19 +240,28 @@ if 'func' not in args:
     args.subparser.error('No action specified')
 
 if args.chameleon is not None:
-    chameleon = args.chameleon
+    chameleon_url = args.chameleon
 else:
     top_args = parent_parser.parse_known_args()[0]
-    chameleon = top_args.chameleon
+    chameleon_url = top_args.chameleon
 
-if chameleon is None:
+if chameleon_url is None:
     try:
-        chameleon = os.getenv('CHAMELEON_IP')
-        if chameleon is None:
+        chameleon_url = os.getenv('CHAMELEON_IP')
+        if chameleon_url is None:
             args.subparser.error('$CHAMELEON_IP is not set and --chameleon was not given')
 
-        chameleon = parse_chameleon_url(chameleon)
+        chameleon_url = parse_chameleon_url(chameleon_url)
     except argparse.ArgumentTypeError as e:
         parser.error('$CHAMELEON_IP: %s' % e.args[0])
 
-__main__ = functools.partial(args.func, chameleon, args, args.subparser)
+chameleon = ServerProxy(chameleon_url,
+                        allow_none=True, use_builtin_types=True)
+def __main__():
+    try:
+        args.func(chameleon, args, args.subparser)
+    except socket.error as e:
+        print('error: Connection to chamelium @ %s failed with code %d: %s' % (
+            chameleon_url, e.errno, e.strerror), file=stderr
+        )
+    except KeyboardInterrupt:
